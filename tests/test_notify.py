@@ -1,4 +1,5 @@
 """Tests for claude_lark_notify — pure stdlib, no external deps."""
+from __future__ import annotations
 
 import json
 import sys
