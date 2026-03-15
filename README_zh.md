@@ -50,13 +50,13 @@ cd claude-lark
 
 **macOS / Linux:**
 ```bash
-chmod +x install.sh
-./install.sh
+chmod +x scripts/install.sh
+./scripts/install.sh
 ```
 
 **Windows (PowerShell):**
 ```powershell
-.\install.ps1
+.\scripts\install.ps1
 ```
 
 安装器会引导你完成：
@@ -151,6 +151,8 @@ Claude Code 需要你的输入时发送，根据类型使用不同颜色：
 ---
 
 ## 飞书机器人配置（团队管理员操作）
+
+> 完整指南含常见问题排查：[docs/admin-setup.md](docs/admin-setup.md)
 
 ### 创建机器人
 
@@ -252,12 +254,12 @@ echo '{"hook_event_name":"Stop","cwd":"/tmp/test","session_id":"test","last_assi
 
 **macOS / Linux:**
 ```bash
-./uninstall.sh
+./scripts/uninstall.sh
 ```
 
 **Windows:**
 ```powershell
-.\uninstall.ps1
+.\scripts\uninstall.ps1
 ```
 
 自动移除 Claude Code hooks，可选删除配置文件。

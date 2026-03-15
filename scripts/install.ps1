@@ -34,7 +34,8 @@ $ConfigDir = Join-Path $HOME ".config" "claude-lark"
 $ConfigFile = Join-Path $ConfigDir "config.json"
 $SettingsFile = Join-Path $HOME ".claude" "settings.json"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-$NotifyScript = Join-Path $ScriptDir "claude_lark_notify.py"
+$ProjectDir = Split-Path -Parent $ScriptDir
+$NotifyScript = Join-Path $ProjectDir "claude_lark_notify.py"
 
 # ── Helpers ──────────────────────────────────────────────────────────
 function Write-Info  { Write-Host "  [info]  $args" -ForegroundColor Cyan }

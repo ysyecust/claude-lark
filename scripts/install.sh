@@ -16,7 +16,8 @@ CONFIG_DIR="$HOME/.config/claude-lark"
 CONFIG_FILE="$CONFIG_DIR/config.json"
 SETTINGS_FILE="$HOME/.claude/settings.json"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-NOTIFY_SCRIPT="$SCRIPT_DIR/claude_lark_notify.py"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+NOTIFY_SCRIPT="$PROJECT_DIR/claude_lark_notify.py"
 
 # ── Colors ────────────────────────────────────────────────────────────
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[0;33m'

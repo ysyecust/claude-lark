@@ -50,13 +50,13 @@ cd claude-lark
 
 **macOS / Linux:**
 ```bash
-chmod +x install.sh
-./install.sh
+chmod +x scripts/install.sh
+./scripts/install.sh
 ```
 
 **Windows (PowerShell):**
 ```powershell
-.\install.ps1
+.\scripts\install.ps1
 ```
 
 The installer will:
@@ -150,6 +150,8 @@ Blue card for worktree/swarm sub-agent completions, clearly distinguished from m
 
 ## Lark Bot Setup (Team Admins)
 
+> Full guide with troubleshooting: [docs/admin-setup.md](docs/admin-setup.md)
+
 ### Create Bot
 
 1. Go to [Lark Open Platform](https://open.feishu.cn/app)
@@ -240,12 +242,12 @@ echo '{"hook_event_name":"Stop","cwd":"/tmp/test","session_id":"test","last_assi
 
 **macOS / Linux:**
 ```bash
-./uninstall.sh
+./scripts/uninstall.sh
 ```
 
 **Windows:**
 ```powershell
-.\uninstall.ps1
+.\scripts\uninstall.ps1
 ```
 
 Removes Claude Code hooks and optionally deletes config files.
@@ -256,17 +258,18 @@ Removes Claude Code hooks and optionally deletes config files.
 
 ```
 claude-lark/
-├── claude_lark_notify.py   # Hook script (single file, stdlib only)
-├── install.sh              # Installer (macOS/Linux)
-├── install.ps1             # Installer (Windows)
-├── uninstall.sh            # Uninstaller (macOS/Linux)
-├── uninstall.ps1           # Uninstaller (Windows)
-├── config.example.json     # Example configuration
-├── tests/                  # Test suite (58 tests)
-├── CONTRIBUTING.md         # Contribution guidelines
-├── CHANGELOG.md            # Version history
-├── LICENSE                 # MIT
-└── README.md
+├── claude_lark_notify.py       # Hook script (single file, stdlib only)
+├── scripts/
+│   ├── install.sh              # Installer (macOS/Linux)
+│   ├── install.ps1             # Installer (Windows)
+│   ├── uninstall.sh            # Uninstaller (macOS/Linux)
+│   └── uninstall.ps1           # Uninstaller (Windows)
+├── tests/                      # Test suite (58 tests)
+├── docs/
+│   └── admin-setup.md          # Lark Bot admin guide
+├── config.example.json
+├── CONTRIBUTING.md / CHANGELOG.md / LICENSE
+└── README.md / README_zh.md
 ```
 
 ## Requirements
