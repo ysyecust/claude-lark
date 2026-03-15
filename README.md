@@ -1,68 +1,71 @@
 # claude-lark
 
-**Claude Code → 飞书通知**
+**Claude Code → Lark (Feishu) Notifications**
 
-Claude Code 完成任务或需要你确认时，自动发送飞书消息提醒——让你可以放心离开终端，回来时不会错过任何事。
+[中文文档](README_zh.md)
 
----
-
-## 特性
-
-- **零依赖** — 纯 Python 标准库，不需要 `pip install`
-- **无需服务** — 本地 hook 脚本直接调飞书 API，不用跑任何后台服务
-- **轻量快速** — token 自动缓存（2 小时有效），每次通知仅 ~100ms
-- **静默失败** — 任何异常都不会阻塞 Claude Code
-- **丰富卡片** — 双列布局，项目名、设备名、Claude 回复内容、时间戳一目了然
-- **多事件支持** — 任务完成、权限确认、等待输入等不同场景使用不同卡片样式
-- **手机号/邮箱安装** — 无需手动查 Open ID，安装器自动通过手机号或邮箱获取
-
-## 工作原理
-
-```
-Claude Code 事件 (Stop / Notification)
-  → 触发本地 hook 脚本
-    → 获取飞书 tenant_access_token（有缓存）
-      → 调飞书消息 API 发送卡片
-        → 你在飞书收到通知
-```
-
-只有 2 个 HTTP 请求，全部在本地完成，不依赖任何中间服务。
+Get instant Lark messages when Claude Code finishes a task or needs your attention — step away from the terminal without missing anything.
 
 ---
 
-## 快速开始
+## Features
 
-### 1. 克隆仓库
+- **Zero dependencies** — Python 3.8+ stdlib only, no `pip install`
+- **No server needed** — local hook script calls Lark API directly
+- **Fast** — token caching (2h TTL), ~100ms per notification
+- **Silent failures** — never blocks Claude Code
+- **Rich cards** — project, device, stats (tokens, tools, duration), git info, Claude's response
+- **Multiple event types** — task completion, permission prompts, idle prompts with distinct card styles
+- **Phone/email install** — auto-lookup Open ID during setup, no manual steps
+- **Sub-agent aware** — tracks and displays spawned sub-agents
+
+## How it Works
+
+```
+Claude Code event (Stop / Notification)
+  → triggers local hook script
+    → fetches Lark tenant_access_token (cached)
+      → calls Lark message API to send card
+        → you receive a notification in Lark
+```
+
+Just 2 HTTP requests, all local. No intermediate server.
+
+---
+
+## Quick Start
+
+### 1. Clone
 
 ```bash
 git clone https://github.com/ysyecust/claude-lark.git
 cd claude-lark
 ```
 
-### 2. 运行安装器
+### 2. Install
 
 ```bash
 chmod +x install.sh
 ./install.sh
 ```
 
-安装器会引导你完成：
+The installer will:
 
-1. 输入飞书机器人凭证（App ID + App Secret，团队管理员提供）
-2. 选择身份验证方式（**手机号** / 邮箱 / 直接输入 Open ID）
-3. 自动验证 API 连接
-4. 发送测试通知到你的飞书
-5. 自动配置 Claude Code hooks
+1. Ask for Lark Bot credentials (App ID + App Secret, provided by team admin)
+2. Choose identity lookup method (**phone number** / email / direct Open ID)
+3. Verify API connection
+4. Send a test notification
+5. Configure Claude Code hooks automatically
 
-### 3. 完成
+### 3. Done
 
-之后 Claude Code 每次完成回复，你都会在飞书收到通知卡片。
+From now on, every time Claude Code finishes a response, you'll receive a Lark card notification.
 
 ---
 
-## 配置
+## Configuration
 
-配置文件位于 `~/.config/claude-lark/config.json`（权限 600，仅用户可读）：
+Config file: `~/.config/claude-lark/config.json` (permissions 600):
 
 ```json
 {
@@ -73,16 +76,16 @@ chmod +x install.sh
 }
 ```
 
-| 字段 | 说明 | 来源 |
-|------|------|------|
-| `app_id` | 飞书机器人 App ID | 团队管理员提供 |
-| `app_secret` | 飞书机器人 App Secret | 团队管理员提供 |
-| `open_id` | 你的飞书 Open ID | 安装器自动获取 |
-| `events` | 通知哪些事件（可选） | 默认 `["Stop", "Notification"]` |
+| Field | Description | Source |
+|-------|-------------|--------|
+| `app_id` | Lark Bot App ID | Team admin |
+| `app_secret` | Lark Bot App Secret | Team admin |
+| `open_id` | Your Lark Open ID | Auto-detected by installer |
+| `events` | Which events to notify (optional) | Default: `["Stop", "Notification"]` |
 
-### 事件过滤
+### Event Filtering
 
-通过 `events` 字段控制通知哪些事件：
+Control which events trigger notifications:
 
 ```json
 {
@@ -90,81 +93,81 @@ chmod +x install.sh
 }
 ```
 
-| 值 | 含义 |
-|----|------|
-| `Stop` | Claude Code 完成回复时通知 |
-| `Notification` | Claude Code 需要确认/输入时通知 |
+| Value | Meaning |
+|-------|---------|
+| `Stop` | Notify when Claude Code finishes a response |
+| `Notification` | Notify when Claude Code needs confirmation/input |
 
-如果只想在任务完成时收到通知，去掉 `"Notification"` 即可。
+### Environment Variables
 
----
-
-## 通知卡片
-
-### ✅ 任务完成 (Stop)
-
-Claude Code 完成回复时发送，turquoise 绿色卡片：
-
-| 信息 | 说明 |
-|------|------|
-| 项目 | 当前工作目录的项目名 |
-| 设备 | 运行 Claude Code 的主机名 |
-| Claude 的回复 | 最后一条回复的摘要（截断 500 字） |
-| 底部信息 | 完整目录路径、会话 ID、时间 |
-
-### ⚠️ 需要确认 (Notification)
-
-Claude Code 需要你的输入时发送，根据类型使用不同颜色：
-
-| 类型 | 颜色 | 含义 |
-|------|------|------|
-| `permission_prompt` | 🟠 橙色 | Claude 需要执行权限 |
-| `idle_prompt` | 🟡 黄色 | Claude 等待你的输入 |
-| `auth_success` | 🟢 绿色 | 认证完成 |
-| `elicitation_dialog` | 🔵 蓝色 | Claude 需要额外信息 |
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `CLAUDE_LARK_TZ_OFFSET` | Timezone offset from UTC (hours) | `8` (Asia/Shanghai) |
 
 ---
 
-## 飞书机器人配置（团队管理员操作）
+## Notification Cards
 
-### 创建机器人
+### ✅ Task Complete (Stop)
 
-1. 打开 [飞书开放平台](https://open.feishu.cn/app)
-2. 创建 **自建应用**
-3. **添加应用能力** → 开启 **机器人**
+Turquoise card sent when Claude Code finishes a response:
 
-### 配置权限
+| Info | Description |
+|------|-------------|
+| Project | Current working directory name |
+| Device | Hostname of the machine running Claude Code |
+| Stats | Duration, tokens (turn/total), tools (turn/total), conversation turns, git branch |
+| Sub-agents | Newly spawned agents with type and description |
+| Git | Latest commit, branch, dirty status |
+| Response | Claude's last message (markdown-cleaned, up to 4000 chars) |
 
-在 **权限管理** 中开通以下权限：
+### ⚠️ Attention Needed (Notification)
 
-| 权限 | 权限标识 | 用途 |
-|------|---------|------|
-| 发送消息 | `im:message:send_as_bot` | 发送通知卡片（必需） |
-| 获取用户 ID | `contact:user.id:readonly` | 安装时通过手机号/邮箱查找用户（推荐） |
+Sent when Claude Code needs your input, with color-coded headers:
 
-### 发布应用
+| Type | Color | Meaning |
+|------|-------|---------|
+| `permission_prompt` | Orange | Claude needs execution permission |
+| `idle_prompt` | Yellow | Claude is waiting for your input |
+| `auth_success` | Green | Authentication completed |
+| `elicitation_dialog` | Blue | Claude needs additional information |
 
-1. **版本管理** → 创建版本 → 发布
-2. 在管理后台审批通过
+### 🔧 Sub-Agent Complete
 
-### 分发给团队
-
-将以下信息发给团队成员：
-
-```
-App ID:     cli_xxxxxxxx
-App Secret: xxxxxxxx
-```
-
-团队成员运行 `./install.sh`，输入手机号即可完成配置。
+Blue card for worktree/swarm sub-agent completions, clearly distinguished from main agent notifications.
 
 ---
 
-## 手动安装
+## Lark Bot Setup (Team Admins)
 
-如果不想使用安装器，手动配置：
+### Create Bot
 
-### 1. 创建配置文件
+1. Go to [Lark Open Platform](https://open.feishu.cn/app)
+2. Create a **Custom App**
+3. **Add capabilities** → enable **Bot**
+
+### Permissions
+
+Enable these in **Permission Management**:
+
+| Permission | Identifier | Purpose |
+|-----------|------------|---------|
+| Send messages | `im:message:send_as_bot` | Send notification cards (required) |
+| Get user ID | `contact:user.id:readonly` | Lookup users by phone/email during install (recommended) |
+
+### Publish & Distribute
+
+1. **Version Management** → Create version → Publish
+2. Approve in admin console
+3. Share App ID and App Secret with your team
+
+---
+
+## Manual Installation
+
+If you prefer not to use the installer:
+
+### 1. Create config
 
 ```bash
 mkdir -p ~/.config/claude-lark
@@ -179,9 +182,9 @@ EOF
 chmod 600 ~/.config/claude-lark/config.json
 ```
 
-### 2. 编辑 Claude Code 设置
+### 2. Add Claude Code hooks
 
-在 `~/.claude/settings.json` 的 `hooks` 中添加：
+Add to `~/.claude/settings.json`:
 
 ```json
 {
@@ -214,7 +217,7 @@ chmod 600 ~/.config/claude-lark/config.json
 }
 ```
 
-### 3. 测试
+### 3. Test
 
 ```bash
 echo '{"hook_event_name":"Stop","cwd":"/tmp/test","session_id":"test","last_assistant_message":"Hello!"}' \
@@ -223,56 +226,58 @@ echo '{"hook_event_name":"Stop","cwd":"/tmp/test","session_id":"test","last_assi
 
 ---
 
-## 卸载
+## Uninstall
 
 ```bash
 ./uninstall.sh
 ```
 
-自动移除 Claude Code hooks，可选删除配置文件。
+Removes Claude Code hooks and optionally deletes config files.
 
 ---
 
-## 项目结构
+## Project Structure
 
 ```
 claude-lark/
-├── claude_lark_notify.py   # Hook 脚本（单文件，纯 stdlib）
-├── install.sh              # 交互式安装器
-├── uninstall.sh            # 卸载脚本
-├── config.example.json     # 配置示例
-├── docs/                   # 截图等资源
+├── claude_lark_notify.py   # Hook script (single file, stdlib only)
+├── install.sh              # Interactive installer
+├── uninstall.sh            # Uninstaller
+├── config.example.json     # Example configuration
+├── tests/                  # Test suite (57 tests)
+├── CONTRIBUTING.md         # Contribution guidelines
+├── CHANGELOG.md            # Version history
 ├── LICENSE                 # MIT
 └── README.md
 ```
 
-## 系统要求
+## Requirements
 
-- Python 3.8+（macOS / Linux 自带）
+- Python 3.8+ (pre-installed on macOS / Linux)
 - [Claude Code](https://claude.ai/claude-code) CLI
-- 飞书自建应用（需 `im:message:send_as_bot` 权限）
+- Lark Custom App with `im:message:send_as_bot` permission
 
 ## FAQ
 
-**Q: 会不会拖慢 Claude Code？**
+**Q: Will it slow down Claude Code?**
 
-不会。hook 脚本超时设为 30 秒，实际执行约 100ms。即使网络异常也会静默退出，不影响 Claude Code。
+No. The hook timeout is 30s, but actual execution is ~100ms. Any errors exit silently without affecting Claude Code.
 
-**Q: token 是怎么缓存的？**
+**Q: How is the token cached?**
 
-`tenant_access_token` 缓存在 `~/.config/claude-lark/.token_cache`，有效期 2 小时。过期后自动刷新。
+`tenant_access_token` is cached at `~/.config/claude-lark/.token_cache` with a 2-hour TTL. Auto-refreshes when expired.
 
-**Q: 通知太频繁怎么办？**
+**Q: Too many notifications?**
 
-在配置中设置 `"events": ["Notification"]`，只在需要确认时通知，不在每次回复完成时通知。
+Set `"events": ["Notification"]` in config to only get notified when Claude needs your input, not on every response.
 
-**Q: 多台电脑怎么办？**
+**Q: Multiple machines?**
 
-每台电脑独立运行 `install.sh`，使用同一套 App ID/Secret 和你的手机号即可。卡片会显示设备名，方便区分。
+Run `install.sh` on each machine with the same App ID/Secret and your phone number. Cards show the device name so you can tell them apart.
 
-**Q: Open ID 是什么？怎么获取？**
+**Q: What is Open ID?**
 
-Open ID 是飞书为每个用户在每个应用下生成的唯一标识。安装器支持通过手机号或邮箱自动查询，无需手动获取。
+A unique identifier Lark generates for each user per app. The installer auto-detects it via phone number or email — no manual lookup needed.
 
 ## License
 
