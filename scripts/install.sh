@@ -8,6 +8,7 @@
 #   ./install.sh --phone 138xxxx        # Auto-lookup open_id by phone
 #   ./install.sh --email foo@bar.com    # Auto-lookup open_id by email
 #   ./install.sh --open-id ou_xxx       # Direct open_id
+#   ./install.sh --hooks-only           # Skip credentials, only install hooks
 #
 set -euo pipefail
 
@@ -39,9 +40,11 @@ while [[ $# -gt 0 ]]; do
         --app-secret) APP_SECRET="$2"; shift 2 ;;
         --phone)      PHONE="$2";      shift 2 ;;
         --email)      EMAIL="$2";      shift 2 ;;
+        --hooks-only) HOOKS_ONLY=true; shift ;;
         -h|--help)
             echo "Usage: $0 [--phone 138xxx | --email x@y.com | --open-id ou_xxx]"
             echo "       [--app-id cli_xxx] [--app-secret xxx]"
+            echo "       [--hooks-only]  # Skip credentials, only install hooks"
             exit 0 ;;
         *) error "Unknown argument: $1" ;;
     esac
@@ -66,6 +69,45 @@ _cfg_val() {
     python3 -c "import json; print(json.load(open('$CONFIG_FILE')).get('$1',''))" 2>/dev/null
 }
 
+# ── Auto-detect non-interactive mode ─────────────────────────────────
+# If --hooks-only is set, or config already has complete credentials and
+# no credential arguments were passed, skip Steps 1-3.
+if [[ "${HOOKS_ONLY:-false}" != "true" && -z "$APP_ID" && -z "$APP_SECRET" && \
+      -z "$PHONE" && -z "$EMAIL" && -z "$OPEN_ID" ]]; then
+    # Check if config already has all required fields
+    _existing_app_id=$(_cfg_val app_id) || _existing_app_id=""
+    _existing_secret=$(_cfg_val app_secret) || _existing_secret=""
+    _existing_oid=$(_cfg_val open_id) || _existing_oid=""
+    if [[ -n "$_existing_app_id" && -n "$_existing_secret" && -n "$_existing_oid" ]]; then
+        HOOKS_ONLY=true
+        info "检测到完整配置文件，跳过凭证设置"
+    fi
+fi
+
+if [[ "${HOOKS_ONLY:-false}" == "true" ]]; then
+    # Verify config exists
+    [[ -f "$CONFIG_FILE" ]] || error "配置文件不存在: $CONFIG_FILE，请先放置配置文件"
+    APP_ID=$(_cfg_val app_id) || error "配置文件缺少 app_id"
+    APP_SECRET=$(_cfg_val app_secret) || error "配置文件缺少 app_secret"
+    OPEN_ID=$(_cfg_val open_id) || error "配置文件缺少 open_id"
+
+    step "Step 1/2  验证 API 连接"
+    TOKEN=$(LARK_APP_ID="$APP_ID" LARK_APP_SECRET="$APP_SECRET" python3 -c "
+import json, urllib.request, sys, os
+req = urllib.request.Request(
+    'https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal/',
+    data=json.dumps({'app_id': os.environ['LARK_APP_ID'], 'app_secret': os.environ['LARK_APP_SECRET']}).encode(),
+    headers={'Content-Type': 'application/json'}, method='POST')
+try:
+    data = json.loads(urllib.request.urlopen(req, timeout=10).read())
+    if data.get('code') == 0: print(data['tenant_access_token'])
+    else: print('FAIL:' + data.get('msg',''), file=sys.stderr); sys.exit(1)
+except Exception as e: print('FAIL:' + str(e), file=sys.stderr); sys.exit(1)
+" 2>&1) || error "API 连接失败，请检查配置文件中的凭证"
+    ok "飞书 API 连接成功"
+
+    step "Step 2/2  安装 hooks"
+else
 # ══════════════════════════════════════════════════════════════════════
 #  Step 1: Collect Bot Credentials
 # ══════════════════════════════════════════════════════════════════════
@@ -191,6 +233,8 @@ with open(os.environ['LARK_CONFIG_FILE'], 'w') as f: json.dump(cfg, f, indent=4)
 "
 chmod 600 "$CONFIG_FILE"
 ok "配置已保存  $CONFIG_FILE"
+
+fi  # end of interactive vs hooks-only
 
 # Install Claude Code hooks
 HOOK_CMD="python3 $NOTIFY_SCRIPT"

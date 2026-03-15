@@ -79,7 +79,7 @@ chmod +x scripts/install.sh
 
 ## 配置
 
-配置文件位于 `~/.config/claude-lark/config.json`（权限 600，仅用户可读）：
+配置文件位于 `~/.config/claude-lark/config.json`（macOS/Linux 下权限 600 仅用户可读；Windows 上请确保文件不被其他用户读取）：
 
 ```json
 {
@@ -119,6 +119,13 @@ chmod +x scripts/install.sh
 | 变量 | 说明 | 默认值 |
 |------|------|--------|
 | `CLAUDE_LARK_TZ_OFFSET` | 时区偏移（相对 UTC 的小时数） | `8`（Asia/Shanghai） |
+| `CLAUDE_LARK_DEBUG` | 开启调试日志，写入 `~/.config/claude-lark/debug.log` | 关闭 |
+
+开启调试日志（排查问题时使用）：
+
+```bash
+export CLAUDE_LARK_DEBUG=1
+```
 
 ---
 
@@ -226,7 +233,7 @@ chmod 600 ~/.config/claude-lark/config.json
 
 ### 2. 编辑 Claude Code 设置
 
-在 `~/.claude/settings.json` 的 `hooks` 中添加：
+在 `~/.claude/settings.json` 的 `hooks` 中添加（Windows 上请用 `python` 替代 `python3`）：
 
 ```json
 {
@@ -307,6 +314,10 @@ claude-lark/
 - **Windows**: PowerShell 5.1+（系统自带）
 
 ## FAQ
+
+**Q: 通知没有收到，怎么排查？**
+
+设置环境变量 `CLAUDE_LARK_DEBUG=1`，脚本会将详细日志写入 `~/.config/claude-lark/debug.log`，包括配置加载、API 调用和错误信息。
 
 **Q: 会不会拖慢 Claude Code？**
 

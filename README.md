@@ -79,7 +79,7 @@ From now on, every time Claude Code finishes a response, you'll receive a Lark c
 
 ## Configuration
 
-Config file: `~/.config/claude-lark/config.json` (permissions 600):
+Config file: `~/.config/claude-lark/config.json` (permissions 600 on macOS/Linux; on Windows, ensure the file is not readable by other users):
 
 ```json
 {
@@ -117,6 +117,13 @@ Control which events trigger notifications:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `CLAUDE_LARK_TZ_OFFSET` | Timezone offset from UTC (hours) | `8` (Asia/Shanghai) |
+| `CLAUDE_LARK_DEBUG` | Enable debug logging to `~/.config/claude-lark/debug.log` | Off |
+
+To enable debug logging (useful for troubleshooting):
+
+```bash
+export CLAUDE_LARK_DEBUG=1
+```
 
 ---
 
@@ -224,7 +231,7 @@ chmod 600 ~/.config/claude-lark/config.json
 
 ### 2. Add Claude Code hooks
 
-Add to `~/.claude/settings.json`:
+Add to `~/.claude/settings.json` (use `python` instead of `python3` on Windows):
 
 ```json
 {
@@ -308,6 +315,10 @@ claude-lark/
 - **Windows**: PowerShell 5.1+ (built-in)
 
 ## FAQ
+
+**Q: Notifications aren't working, how do I debug?**
+
+Set `CLAUDE_LARK_DEBUG=1` as an environment variable. The script will write detailed logs to `~/.config/claude-lark/debug.log`, showing config loading, API calls, and any errors.
 
 **Q: Will it slow down Claude Code?**
 
