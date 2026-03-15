@@ -4,6 +4,7 @@ config.json
 .last_stats
 checkpoints/
 team-configs/
+docs/team-quickstart.md
 
 # Python
 __pycache__/
