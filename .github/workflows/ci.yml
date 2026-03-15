@@ -34,5 +34,5 @@ jobs:
       - name: Verify shell scripts
         if: runner.os != 'Windows'
         run: |
-          bash -n install.sh
-          bash -n uninstall.sh
+          bash -n scripts/install.sh
+          bash -n scripts/uninstall.sh

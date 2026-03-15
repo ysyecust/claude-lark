@@ -3,6 +3,7 @@ config.json
 .token_cache
 .last_stats
 checkpoints/
+team-configs/
 
 # Python
 __pycache__/

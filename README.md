@@ -171,11 +171,35 @@ Enable these in **Permission Management**:
 | Send messages | `im:message:send_as_bot` | Send notification cards (required) |
 | Get user ID | `contact:user.id:readonly` | Lookup users by phone/email during install (recommended) |
 
-### Publish & Distribute
+### Publish
 
 1. **Version Management** → Create version → Publish
 2. Approve in admin console
-3. Share App ID and App Secret with your team
+
+### Distribute (Two Options)
+
+**Option A: Share credentials** — give team members App ID + Secret, they run `install.sh` themselves.
+
+**Option B: Admin generates configs** (recommended, credentials stay with admin):
+
+```bash
+./scripts/admin-setup.sh
+```
+
+The script will:
+1. Ask for App ID + Secret (only the admin sees them)
+2. Prompt for team members' phone numbers
+3. Batch-lookup Open IDs via Lark API
+4. Generate a `config-phone.json` for each member under `team-configs/`
+
+Then distribute:
+```bash
+# Send each person their config file, they just run:
+mkdir -p ~/.config/claude-lark
+cp config-138xxxx.json ~/.config/claude-lark/config.json
+chmod 600 ~/.config/claude-lark/config.json
+./scripts/install.sh   # skips credential prompts, only installs hooks
+```
 
 ---
 

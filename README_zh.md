@@ -178,16 +178,30 @@ Claude Code 需要你的输入时发送，根据类型使用不同颜色：
 1. **版本管理** → 创建版本 → 发布
 2. 在管理后台审批通过
 
-### 分发给团队
+### 分发给团队（两种方式）
 
-将以下信息发给团队成员：
+**方式 A：分享凭证** — 把 App ID + Secret 发给成员，他们自己运行 `./scripts/install.sh`。
 
+**方式 B：管理员批量生成配置**（推荐，凭证不离开管理员手中）：
+
+```bash
+./scripts/admin-setup.sh
 ```
-App ID:     cli_xxxxxxxx
-App Secret: xxxxxxxx
-```
 
-团队成员运行 `./install.sh`，输入手机号即可完成配置。
+脚本会：
+1. 输入 App ID + Secret（仅管理员可见）
+2. 逐个输入成员手机号
+3. 批量查询 Open ID
+4. 在 `team-configs/` 下生成每人的 `config-手机号.json`
+
+然后分发：
+```bash
+# 把对应的 config 文件发给每个人，他们只需：
+mkdir -p ~/.config/claude-lark
+cp config-138xxxx.json ~/.config/claude-lark/config.json
+chmod 600 ~/.config/claude-lark/config.json
+./scripts/install.sh   # 跳过凭证步骤，只安装 hook
+```
 
 ---
 
