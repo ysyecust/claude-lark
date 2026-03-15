@@ -11,10 +11,12 @@ Config: ~/.config/claude-lark/config.json
 from __future__ import annotations
 
 import json
+import os
 import platform
 import subprocess
 import sys
 import time
+import traceback
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone, timedelta
@@ -24,6 +26,23 @@ from pathlib import Path
 CONFIG_DIR = Path.home() / ".config" / "claude-lark"
 CONFIG_PATH = CONFIG_DIR / "config.json"
 TOKEN_CACHE_PATH = CONFIG_DIR / ".token_cache"
+DEBUG_LOG_PATH = CONFIG_DIR / "debug.log"
+
+# ── Debug logging ────────────────────────────────────────────────────
+_DEBUG = os.environ.get("CLAUDE_LARK_DEBUG", "").strip() in ("1", "true", "yes")
+
+
+def _debug_log(msg: str) -> None:
+    """Write a debug message to the log file (only when CLAUDE_LARK_DEBUG=1)."""
+    if not _DEBUG:
+        return
+    try:
+        CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+        with open(DEBUG_LOG_PATH, "a", encoding="utf-8") as f:
+            ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            f.write(f"[{ts}] {msg}\n")
+    except OSError:
+        pass
 
 # ── Lark API ─────────────────────────────────────────────────────────
 LARK_TOKEN_URL = (
@@ -44,19 +63,26 @@ def _load_config() -> dict | None:
         with open(CONFIG_PATH, "r", encoding="utf-8") as f:
             cfg = json.load(f)
         if not all(cfg.get(k) for k in ("app_id", "app_secret", "open_id")):
+            _debug_log(f"Config incomplete: {CONFIG_PATH}")
             return None
+        _debug_log(f"Config loaded: app_id={cfg['app_id']}, open_id={cfg['open_id']}")
         return cfg
-    except (FileNotFoundError, json.JSONDecodeError, KeyError):
+    except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
+        _debug_log(f"Config load failed: {e}")
         return None
 
 
 def _read_stdin() -> dict:
     try:
         if sys.stdin.isatty():
+            _debug_log("stdin is a tty, no event data")
             return {}
         raw = sys.stdin.read()
-        return json.loads(raw) if raw.strip() else {}
-    except (json.JSONDecodeError, IOError):
+        event = json.loads(raw) if raw.strip() else {}
+        _debug_log(f"Event received: {event.get('hook_event_name', '?')}, cwd={event.get('cwd', '?')}")
+        return event
+    except (json.JSONDecodeError, IOError) as e:
+        _debug_log(f"stdin read failed: {e}")
         return {}
 
 
@@ -93,12 +119,15 @@ def _fetch_tenant_token(app_id: str, app_secret: str) -> str | None:
         with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT) as resp:
             data = json.loads(resp.read())
         if data.get("code") != 0:
+            _debug_log(f"Token fetch failed: code={data.get('code')}, msg={data.get('msg')}")
             return None
         token = data.get("tenant_access_token", "")
         if token:
             _save_token_cache(token, data.get("expire", 7200))
+            _debug_log("Token fetched and cached")
         return token or None
-    except (urllib.error.URLError, json.JSONDecodeError, OSError):
+    except (urllib.error.URLError, json.JSONDecodeError, OSError) as e:
+        _debug_log(f"Token fetch error: {e}")
         return None
 
 
@@ -295,7 +324,6 @@ def _get_git_info(cwd: str) -> dict:
 
 def _now_str() -> str:
     # Use TZ env or default to Asia/Shanghai (UTC+8)
-    import os
     offset_hours = int(os.environ.get("CLAUDE_LARK_TZ_OFFSET", "8"))
     local = datetime.now(timezone.utc) + timedelta(hours=offset_hours)
     return local.strftime("%Y-%m-%d %H:%M:%S")
@@ -640,8 +668,15 @@ def send_card(token: str, open_id: str, card: dict) -> bool:
     )
     try:
         with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT) as resp:
-            return json.loads(resp.read()).get("code") == 0
-    except (urllib.error.URLError, json.JSONDecodeError, OSError):
+            result = json.loads(resp.read())
+            success = result.get("code") == 0
+            if success:
+                _debug_log("Card sent successfully")
+            else:
+                _debug_log(f"Card send failed: code={result.get('code')}, msg={result.get('msg')}")
+            return success
+    except (urllib.error.URLError, json.JSONDecodeError, OSError) as e:
+        _debug_log(f"Card send error: {e}")
         return False
 
 
@@ -649,18 +684,23 @@ def send_card(token: str, open_id: str, card: dict) -> bool:
 
 
 def main() -> None:
+    _debug_log("=== claude-lark notify start ===")
+
     config = _load_config()
     if not config:
+        _debug_log("No config, exiting")
         return
 
     event = _read_stdin()
     if not event:
+        _debug_log("No event data, exiting")
         return
 
     # Event filtering
     event_name = event.get("hook_event_name", "")
     allowed = config.get("events", DEFAULT_EVENTS)
     if event_name and event_name not in allowed:
+        _debug_log(f"Event '{event_name}' not in allowed list {allowed}, skipping")
         return
 
     # Parse transcript for rich stats
@@ -683,6 +723,10 @@ def main() -> None:
         send_card(token, config["open_id"], card)
         session_id = event.get("session_id", "")
         _save_checkpoint(session_id, stats)
+    else:
+        _debug_log("Failed to get token, notification not sent")
+
+    _debug_log("=== claude-lark notify end ===")
 
 
 if __name__ == "__main__":
