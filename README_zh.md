@@ -43,13 +43,37 @@ Claude Code 事件 (Stop / Notification)
 
 ## 快速开始
 
-### 一键安装 (macOS / Linux)
+### 方式 1：Claude Code 插件安装（推荐）
+
+Hooks 自动配置，无需手动操作：
+
+```
+/plugin install claude-lark from ysyecust/claude-lark
+```
+
+然后创建配置文件：
+
+```bash
+mkdir -p ~/.config/claude-lark
+cat > ~/.config/claude-lark/config.json << 'EOF'
+{
+    "app_id": "cli_xxx",
+    "app_secret": "xxx",
+    "open_id": "ou_xxx"
+}
+EOF
+chmod 600 ~/.config/claude-lark/config.json
+```
+
+或向团队管理员索要预生成的配置文件（见 [管理员批量配置](#分发给团队两种方式)）。
+
+### 方式 2：一键安装 (macOS / Linux)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ysyecust/claude-lark/main/scripts/install-remote.sh | bash
 ```
 
-### 或手动克隆安装
+### 方式 3：手动克隆安装
 
 ```bash
 git clone https://github.com/ysyecust/claude-lark.git
@@ -59,7 +83,6 @@ cd claude-lark
 chmod +x scripts/install.sh && ./scripts/install.sh
 
 # Windows (PowerShell)
-```powershell
 .\scripts\install.ps1
 ```
 

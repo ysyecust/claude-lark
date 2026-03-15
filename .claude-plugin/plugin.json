@@ -1,0 +1,39 @@
+{
+  "name": "claude-lark",
+  "version": "1.0.0",
+  "description": "Send Claude Code notifications to Lark (Feishu). Get instant rich cards when tasks complete or need your attention.",
+  "author": {
+    "name": "ysyecust",
+    "url": "https://github.com/ysyecust/claude-lark"
+  },
+  "homepage": "https://github.com/ysyecust/claude-lark",
+  "repository": "https://github.com/ysyecust/claude-lark",
+  "license": "MIT",
+  "keywords": ["lark", "feishu", "notifications", "hooks", "飞书"],
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/claude_lark_notify.py",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/claude_lark_notify.py",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

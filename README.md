@@ -43,13 +43,37 @@ Just 2 HTTP requests, all local. No intermediate server.
 
 ## Quick Start
 
-### One-Line Install (macOS / Linux)
+### Method 1: Claude Code Plugin (Recommended)
+
+Hooks auto-configure — no manual setup needed:
+
+```
+/plugin install claude-lark from ysyecust/claude-lark
+```
+
+Then create your config file:
+
+```bash
+mkdir -p ~/.config/claude-lark
+cat > ~/.config/claude-lark/config.json << 'EOF'
+{
+    "app_id": "cli_xxx",
+    "app_secret": "xxx",
+    "open_id": "ou_xxx"
+}
+EOF
+chmod 600 ~/.config/claude-lark/config.json
+```
+
+Or ask your team admin for a pre-generated config file (see [admin batch setup](#distribute-two-options)).
+
+### Method 2: One-Line Install (macOS / Linux)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ysyecust/claude-lark/main/scripts/install-remote.sh | bash
 ```
 
-### Or Clone & Install
+### Method 3: Clone & Install
 
 ```bash
 git clone https://github.com/ysyecust/claude-lark.git
