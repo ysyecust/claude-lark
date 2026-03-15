@@ -255,25 +255,35 @@ class TestParseTranscript:
 
 class TestCheckpoint:
     def test_roundtrip(self, tmp_path):
-        cp_path = tmp_path / ".last_stats"
-        with mock.patch.object(notify, "CHECKPOINT_PATH", cp_path), \
-             mock.patch.object(notify, "CONFIG_DIR", tmp_path):
+        cp_dir = tmp_path / "checkpoints"
+        with mock.patch.object(notify, "CHECKPOINT_DIR", cp_dir):
             stats = {
                 "total_output_tokens": 5000,
                 "total_tool_calls": 42,
                 "total_turns": 10,
                 "total_agents": 3,
             }
-            notify._save_checkpoint(stats)
-            loaded = notify._load_checkpoint()
+            notify._save_checkpoint("sess-123", stats)
+            loaded = notify._load_checkpoint("sess-123")
         assert loaded["output_tokens"] == 5000
         assert loaded["tool_calls"] == 42
         assert loaded["agents"] == 3
         assert "time" in loaded
 
     def test_missing_checkpoint(self, tmp_path):
-        with mock.patch.object(notify, "CHECKPOINT_PATH", tmp_path / "nope"):
-            assert notify._load_checkpoint() == {}
+        with mock.patch.object(notify, "CHECKPOINT_DIR", tmp_path / "nope"):
+            assert notify._load_checkpoint("unknown") == {}
+
+    def test_session_isolation(self, tmp_path):
+        """Different sessions get different checkpoints."""
+        cp_dir = tmp_path / "checkpoints"
+        with mock.patch.object(notify, "CHECKPOINT_DIR", cp_dir):
+            stats_a = {"total_output_tokens": 1000, "total_tool_calls": 10, "total_turns": 5, "total_agents": 1}
+            stats_b = {"total_output_tokens": 9999, "total_tool_calls": 99, "total_turns": 50, "total_agents": 5}
+            notify._save_checkpoint("sess-a", stats_a)
+            notify._save_checkpoint("sess-b", stats_b)
+            assert notify._load_checkpoint("sess-a")["output_tokens"] == 1000
+            assert notify._load_checkpoint("sess-b")["output_tokens"] == 9999
 
 
 # ── _calc_duration ───────────────────────────────────────────────────
@@ -441,9 +451,8 @@ class TestBuildStopCard:
         return {"branch": "main", "last_commit": "abc1234 initial commit", "dirty": False}
 
     def test_basic_card(self, tmp_path):
-        cp = tmp_path / ".last_stats"
-        with mock.patch.object(notify, "CHECKPOINT_PATH", cp), \
-             mock.patch.object(notify, "CONFIG_DIR", tmp_path):
+        cp_dir = tmp_path / "checkpoints"
+        with mock.patch.object(notify, "CHECKPOINT_DIR", cp_dir):
             card = notify._build_stop_card(self._base_event(), self._base_stats(), self._base_git())
         assert card["header"]["template"] == "turquoise"
         assert "任务完成" in card["header"]["title"]["content"]
@@ -452,9 +461,8 @@ class TestBuildStopCard:
     def test_subagent_card(self, tmp_path):
         event = self._base_event()
         event["cwd"] = "/tmp/project/worktrees/agent-1"
-        cp = tmp_path / ".last_stats"
-        with mock.patch.object(notify, "CHECKPOINT_PATH", cp), \
-             mock.patch.object(notify, "CONFIG_DIR", tmp_path):
+        cp_dir = tmp_path / "checkpoints"
+        with mock.patch.object(notify, "CHECKPOINT_DIR", cp_dir):
             card = notify._build_stop_card(event, self._base_stats(), self._base_git())
         assert card["header"]["template"] == "blue"
         assert "子 Agent" in card["header"]["title"]["content"]
@@ -467,9 +475,8 @@ class TestBuildStopCard:
             {"desc": "Run tests", "type": "", "name": "test-runner"},
         ]
         # No previous checkpoint → all agents are "new"
-        cp = tmp_path / ".last_stats"
-        with mock.patch.object(notify, "CHECKPOINT_PATH", cp), \
-             mock.patch.object(notify, "CONFIG_DIR", tmp_path):
+        cp_dir = tmp_path / "checkpoints"
+        with mock.patch.object(notify, "CHECKPOINT_DIR", cp_dir):
             card = notify._build_stop_card(self._base_event(), stats, self._base_git())
         card_json = json.dumps(card, ensure_ascii=False)
         assert "Explore" in card_json
@@ -482,10 +489,11 @@ class TestBuildStopCard:
         stats["agents"] = [
             {"desc": "old", "type": "Explore", "name": ""},
         ]
-        cp = tmp_path / ".last_stats"
-        _write_json(cp, {"output_tokens": 0, "tool_calls": 0, "turns": 0, "agents": 2, "time": time.time() - 60})
-        with mock.patch.object(notify, "CHECKPOINT_PATH", cp), \
-             mock.patch.object(notify, "CONFIG_DIR", tmp_path):
+        cp_dir = tmp_path / "checkpoints"
+        cp_dir.mkdir(parents=True)
+        cp_file = cp_dir / "abc-123-def.json"
+        _write_json(cp_file, {"output_tokens": 0, "tool_calls": 0, "turns": 0, "agents": 2, "time": time.time() - 60})
+        with mock.patch.object(notify, "CHECKPOINT_DIR", cp_dir):
             card = notify._build_stop_card(self._base_event(), stats, self._base_git())
         card_json = json.dumps(card, ensure_ascii=False)
         assert "子 Agent" not in card_json
@@ -573,9 +581,8 @@ class TestTruncateLargeMessage:
             "turn_agents": [], "last_user_ts": None, "model": "", "git_branch": "",
         }
         git = {"branch": "", "last_commit": "", "dirty": False}
-        cp = tmp_path / ".last_stats"
-        with mock.patch.object(notify, "CHECKPOINT_PATH", cp), \
-             mock.patch.object(notify, "CONFIG_DIR", tmp_path):
+        cp_dir = tmp_path / "checkpoints"
+        with mock.patch.object(notify, "CHECKPOINT_DIR", cp_dir):
             card = notify._build_stop_card(event, stats, git)
         card_str = json.dumps(card)
         # The 5000-char message should be truncated to ~4000 + "..."
@@ -603,7 +610,7 @@ class TestMain:
 
     def test_full_flow_mocked(self, tmp_path):
         cfg_path = tmp_path / "config.json"
-        cp_path = tmp_path / ".last_stats"
+        cp_dir = tmp_path / "checkpoints"
         _write_json(cfg_path, {"app_id": "cli_x", "app_secret": "s", "open_id": "ou_x"})
 
         event = {
@@ -614,7 +621,7 @@ class TestMain:
             "transcript_path": "",
         }
         with mock.patch.object(notify, "CONFIG_PATH", cfg_path), \
-             mock.patch.object(notify, "CHECKPOINT_PATH", cp_path), \
+             mock.patch.object(notify, "CHECKPOINT_DIR", cp_dir), \
              mock.patch.object(notify, "CONFIG_DIR", tmp_path), \
              mock.patch("sys.stdin") as m, \
              mock.patch.object(notify, "get_token", return_value="t-mock"), \

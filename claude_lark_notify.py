@@ -178,22 +178,28 @@ def _parse_transcript(path: str) -> dict:
     return stats
 
 
-# ── Checkpoint (for turn-level stats) ────────────────────────────────
+# ── Checkpoint (per-session, for turn-level stats) ───────────────────
 
-CHECKPOINT_PATH = CONFIG_DIR / ".last_stats"
+CHECKPOINT_DIR = CONFIG_DIR / "checkpoints"
 
 
-def _load_checkpoint() -> dict:
+def _checkpoint_path(session_id: str) -> Path:
+    """Per-session checkpoint file."""
+    safe_id = session_id.replace("/", "_")[:64] if session_id else "default"
+    return CHECKPOINT_DIR / f"{safe_id}.json"
+
+
+def _load_checkpoint(session_id: str) -> dict:
     try:
-        with open(CHECKPOINT_PATH, "r") as f:
+        with open(_checkpoint_path(session_id), "r") as f:
             return json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
         return {}
 
 
-def _save_checkpoint(stats: dict) -> None:
+def _save_checkpoint(session_id: str, stats: dict) -> None:
     try:
-        CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+        CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)
         checkpoint = {
             "output_tokens": stats["total_output_tokens"],
             "tool_calls": stats["total_tool_calls"],
@@ -201,8 +207,21 @@ def _save_checkpoint(stats: dict) -> None:
             "agents": stats["total_agents"],
             "time": time.time(),
         }
-        with open(CHECKPOINT_PATH, "w") as f:
+        with open(_checkpoint_path(session_id), "w") as f:
             json.dump(checkpoint, f)
+        # Cleanup: remove checkpoints older than 7 days
+        _cleanup_old_checkpoints()
+    except OSError:
+        pass
+
+
+def _cleanup_old_checkpoints() -> None:
+    """Remove checkpoint files older than 7 days."""
+    try:
+        cutoff = time.time() - 7 * 86400
+        for f in CHECKPOINT_DIR.iterdir():
+            if f.suffix == ".json" and f.stat().st_mtime < cutoff:
+                f.unlink()
     except OSError:
         pass
 
@@ -410,11 +429,12 @@ def _build_stop_card(event: dict, stats: dict, git: dict) -> dict:
     host = _hostname()
     now = _now_str()
     is_sub = _is_subagent(event)
+    session_id = event.get("session_id", "")
 
     branch = git.get("branch") or stats.get("git_branch") or ""
 
-    # Calculate turn data via checkpoint diff
-    prev = _load_checkpoint()
+    # Calculate turn data via checkpoint diff (per-session)
+    prev = _load_checkpoint(session_id)
     total_tok = stats["total_output_tokens"]
     total_tools = stats["total_tool_calls"]
     turn_tok = total_tok - prev.get("output_tokens", 0)
@@ -655,7 +675,8 @@ def main() -> None:
     token = get_token(config["app_id"], config["app_secret"])
     if token:
         send_card(token, config["open_id"], card)
-        _save_checkpoint(stats)
+        session_id = event.get("session_id", "")
+        _save_checkpoint(session_id, stats)
 
 
 if __name__ == "__main__":
