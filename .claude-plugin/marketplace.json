@@ -1,0 +1,17 @@
+{
+  "name": "claude-lark",
+  "owner": {
+    "name": "ysyecust"
+  },
+  "metadata": {
+    "description": "Claude Code → Lark (Feishu) notification plugins",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "claude-lark",
+      "source": "./.claude/plugins/claude-lark",
+      "category": "productivity"
+    }
+  ]
+}
